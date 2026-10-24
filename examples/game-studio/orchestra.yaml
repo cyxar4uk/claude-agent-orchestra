@@ -1,0 +1,61 @@
+# Example: a small "game studio" team for a Minecraft server project (Paper/Spigot plugins).
+# It shows how to replace the default roles with a domain-specific team:
+# custom roles + prompts, a shared knowledge folder, an approval gate before code is written.
+#
+#   ORCHESTRA_CONFIG=examples/game-studio/orchestra.yaml ORCHESTRA_WORKSPACE=/path/to/your/plugin orchestra serve
+
+knowledge_dir: knowledge
+default_workflow: feature-design
+
+shared_rules: |
+  Team rules:
+  - Inspect the repository before proposing edits; never invent classes or files.
+  - Prefer small, reviewable changes. Large requests are split into the smallest shippable step.
+  - End every answer with: What was done / What remains / Risks / Next step.
+
+agents:
+  game-designer:
+    description: Designs gameplay systems, progression, balance and player-facing mechanics.
+    prompt_file: prompts/game_designer.md
+    tools: [Read, Glob, Grep]
+  plugin-dev:
+    description: Implements Paper/Spigot plugin code safely and modularly.
+    prompt_file: prompts/plugin_dev.md
+    tools: [Read, Write, Edit, Bash, Glob, Grep]
+  qa:
+    description: Writes executable test plans and reviews changes for regressions and abuse cases.
+    prompt_file: prompts/qa.md
+    tools: [Read, Glob, Grep]
+
+workflows:
+  feature-design:
+    description: Game designer -> QA review of the design. Read-only.
+    steps:
+      - id: design
+        agent: game-designer
+        task: |
+          Feature request: {{ goal }}
+          Produce an implementable mechanic spec: rules, balance numbers, edge cases, griefing risks.
+      - id: test-plan
+        agent: qa
+        task: |
+          Write an executable test plan (happy path, edge cases, abuse cases) for this design:
+          {{ steps.design }}
+
+  feature-implementation:
+    description: Design -> approval -> plugin implementation -> QA regression review.
+    require_approval: true
+    steps:
+      - id: design
+        agent: game-designer
+        task: "Feature request: {{ goal }}. Produce a minimal implementable spec."
+      - id: implement
+        agent: plugin-dev
+        task: |
+          Implement the smallest safe step of this spec in the plugin codebase:
+          {{ steps.design }}
+      - id: regression
+        agent: qa
+        task: |
+          Review the implementation report and produce a regression checklist:
+          {{ steps.implement }}

@@ -1,0 +1,24 @@
+services:
+  orchestra:
+    build: .
+    image: claude-agent-orchestra:local
+    env_file:
+      - path: .env
+        required: false # optional: you can also export variables in your shell
+    environment:
+      # Container-side paths; these override anything in .env.
+      ORCHESTRA_HOST: 0.0.0.0
+      ORCHESTRA_WORKSPACE: /workspace
+      ORCHESTRA_DATA_DIR: /data
+      ORCHESTRA_BACKEND: ${ORCHESTRA_BACKEND:-claude}
+    ports:
+      # Bound to localhost on purpose. Set ORCHESTRA_API_TOKEN before exposing it anywhere else.
+      - "127.0.0.1:${ORCHESTRA_PORT:-8000}:8000"
+    volumes:
+      # The project the agents read and edit. Point ORCHESTRA_WORKSPACE_HOST at your own repo.
+      - ${ORCHESTRA_WORKSPACE_HOST:-./workspace}:/workspace
+      - orchestra-data:/data
+    restart: unless-stopped
+
+volumes:
+  orchestra-data:

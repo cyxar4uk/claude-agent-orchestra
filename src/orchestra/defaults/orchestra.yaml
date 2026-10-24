@@ -1,0 +1,94 @@
+# Built-in default configuration. Copy this file, edit it, and point ORCHESTRA_CONFIG at it.
+#
+# model: "worker" / "planner" are aliases resolved from ORCHESTRA_WORKER_MODEL / ORCHESTRA_PLANNER_MODEL.
+#        You can also put a literal model ID here, e.g. model: claude-opus-5-5
+# tools: Claude Code built-in tools this agent may use. Read-only roles get Read/Glob/Grep only.
+
+# knowledge_dir: knowledge        # folder of .md/.txt files injected into every agent prompt
+default_workflow: feature-planning
+
+agents:
+  planner:
+    description: Breaks a goal into ordered steps and picks the right specialist for each.
+    prompt_file: prompts/planner.md
+    model: planner
+    tools: [Read, Glob, Grep]
+  analyst:
+    description: Clarifies requirements, scope, users and acceptance criteria.
+    prompt_file: prompts/analyst.md
+    tools: [Read, Glob, Grep]
+  architect:
+    description: Designs the technical approach, interfaces, data flow and risks.
+    prompt_file: prompts/architect.md
+    tools: [Read, Glob, Grep]
+  implementer:
+    description: Implements the agreed design with small, safe edits and runs the tests.
+    prompt_file: prompts/implementer.md
+    tools: [Read, Write, Edit, Bash, Glob, Grep]
+  reviewer:
+    description: Reviews plans or changes for bugs, regressions, missing tests and risks.
+    prompt_file: prompts/reviewer.md
+    tools: [Read, Glob, Grep]
+
+workflows:
+  # Safe default: every step is read-only, nothing in your workspace is modified.
+  feature-planning:
+    description: Analyst -> architect -> reviewer. Read-only; produces a plan, never edits files.
+    steps:
+      - id: requirements
+        agent: analyst
+        task: |
+          Goal: {{ goal }}
+
+          Inspect the workspace and write down the requirements, scope, assumptions and acceptance criteria.
+      - id: design
+        agent: architect
+        task: |
+          Goal: {{ goal }}
+
+          Requirements from the analyst:
+          {{ steps.requirements }}
+
+          Propose a concrete technical design: files to touch, interfaces, data flow, and a step-by-step plan.
+      - id: review
+        agent: reviewer
+        task: |
+          Goal: {{ goal }}
+
+          Critically review this design for gaps, risks and missing tests:
+          {{ steps.design }}
+
+  # Edits files. Pauses for human approval before the implementer touches anything.
+  implement:
+    description: Architect -> implementer -> reviewer. Edits files; requires approval before starting.
+    require_approval: true
+    steps:
+      - id: design
+        agent: architect
+        task: |
+          Goal: {{ goal }}
+
+          Inspect the workspace and propose the smallest safe change that achieves the goal.
+      - id: implement
+        agent: implementer
+        task: |
+          Goal: {{ goal }}
+
+          Implement this design with small edits, then run the project's tests if there are any:
+          {{ steps.design }}
+      - id: review
+        agent: reviewer
+        task: |
+          Goal: {{ goal }}
+
+          Review what the implementer reported and inspect the changed files:
+          {{ steps.implement }}
+
+  # Let the planner agent decide which specialists to use and in what order.
+  auto:
+    description: The planner agent chooses the steps and the specialists dynamically.
+    mode: planner
+    planner: planner
+    agents: [analyst, architect, implementer, reviewer]
+    max_steps: 5
+    require_approval: true

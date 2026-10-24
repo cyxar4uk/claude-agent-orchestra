@@ -1,0 +1,34 @@
+# Minimal custom setup: two agents and one workflow. Everything else is up to you.
+knowledge_dir: knowledge
+default_workflow: summarize-and-critique
+
+agents:
+  summarizer:
+    description: Reads the workspace and writes a short factual summary.
+    prompt: |
+      You are a precise technical summarizer.
+      Read the files you need, then write a summary in at most 10 bullet points.
+      Only state facts you verified by reading files.
+    tools: [Read, Glob, Grep]
+  critic:
+    description: Challenges a summary and lists what is missing or doubtful.
+    prompt: |
+      You are a skeptical reviewer. You receive a summary and must point out
+      unsupported claims, missing topics and the three most useful follow-up questions.
+    tools: [Read, Glob, Grep]
+    model: planner   # uses ORCHESTRA_PLANNER_MODEL if set (e.g. claude-opus-5-5), else the worker model
+
+workflows:
+  summarize-and-critique:
+    description: Summarize the project, then critique the summary.
+    steps:
+      - id: summary
+        agent: summarizer
+        task: |
+          Goal: {{ goal }}
+          Summarize what this project is and how it is structured.
+      - id: critique
+        agent: critic
+        task: |
+          Critique this summary:
+          {{ steps.summary }}

@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "claude-agent-orchestra"
+version = "0.1.0"
+description = "Self-hostable multi-agent orchestrator built on the Claude Agent SDK: agent roles, task pipelines, approval gates, run history, knowledge base, REST API and CLI."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Ilia Melnikov" }]
+keywords = [
+  "claude", "claude-agent-sdk", "anthropic", "multi-agent", "orchestration",
+  "ai-agents", "llm", "fastapi", "workflow", "agentic",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Typing :: Typed",
+]
+dependencies = [
+  "claude-agent-sdk>=0.1.59",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.24",
+  "httpx>=0.27",
+  "ruff>=0.6",
+]
+
+[project.scripts]
+orchestra = "orchestra.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/cyxar4uk/claude-agent-orchestra"
+Issues = "https://github.com/cyxar4uk/claude-agent-orchestra/issues"
+Changelog = "https://github.com/cyxar4uk/claude-agent-orchestra/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orchestra"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+ignore = ["B008", "E501"]  # line length is enforced by `ruff format`
